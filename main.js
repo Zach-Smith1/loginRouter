@@ -10,7 +10,7 @@ const cryptography = require('crypto');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const fetch = require('node-fetch');
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 const secret_key = 'your secret key'; // Unique secret key
 
