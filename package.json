@@ -4,10 +4,7 @@
   "description": "Advanced Login & Registration System",
   "main": "main.js",
   "scripts": {
-    "clean": "rm dist/bundle.js",
-    "start": "node main.js",
-    "dev": "webpack --mode development --watch",
-    "build": "webpack --mode production"
+    "start": "node main.js"
   },
   "author": "",
   "license": "ISC",
