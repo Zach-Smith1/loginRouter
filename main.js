@@ -632,37 +632,72 @@ app.get('/logout', (request, response) => {
 	response.redirect('/');
 });
 
+
+
 // http://localhost:3000/admin/ - Admin dashboard page
-app.get('/admin/', (request, response) => isAdmin(request, settings => {
-	// Retrieve statistical data
-	connection.query('SELECT * FROM accounts WHERE cast(registered as DATE) = cast(now() as DATE) ORDER BY registered DESC; SELECT COUNT(*) AS total FROM accounts LIMIT 1; SELECT COUNT(*) AS total FROM accounts WHERE last_seen < date_sub(now(), interval 1 month) LIMIT 1; SELECT * FROM accounts WHERE last_seen > date_sub(now(), interval 1 day) ORDER BY last_seen DESC; SELECT COUNT(*) AS total FROM accounts WHERE last_seen > date_sub(now(), interval 1 month) LIMIT 1', (error, results, fields) => {
-			if (error) {
-					// Handle the error
-					console.error(error);
-					return response.status(500).send('Internal Server Error');
-			}
+app.get('/admin/', async (request, response) => {
+	try {
+			await new Promise(async (resolve, reject) => {
+					await isAdmin(request, settings => {
+							// Retrieve statistical data
+							const query1 = 'SELECT * FROM accounts WHERE cast(registered as DATE) = cast(now() as DATE) ORDER BY registered DESC';
+							const query2 = 'SELECT COUNT(*) AS total FROM accounts LIMIT 1';
+							const query3 = 'SELECT COUNT(*) AS total FROM accounts WHERE last_seen < date_sub(now(), interval 1 month) LIMIT 1';
+							const query4 = 'SELECT * FROM accounts WHERE last_seen > date_sub(now(), interval 1 day) ORDER BY last_seen DESC';
+							const query5 = 'SELECT COUNT(*) AS total FROM accounts WHERE last_seen > date_sub(now(), interval 1 month) LIMIT 1';
 
-			// Check if each result array exists and has at least one element
-			if (!results || results.length < 5 || !results[1][0] || !results[2][0] || !results[4][0]) {
-					// Handle the case where expected data is missing
-					return response.status(500).send('Invalid data structure in the database results');
-			}
+							function executeQuery(query) {
+									return new Promise((resolve, reject) => {
+											connection.query(query, (error, results, fields) => {
+													if (error) {
+															reject(error);
+													} else {
+															resolve(results);
+													}
+											});
+									});
+							}
 
-			// Render dashboard template
-			response.render('admin/dashboard.html', {
-					selected: 'dashboard',
-					accounts: results[0],
-					accounts_total: results[1][0],
-					inactive_accounts: results[2][0],
-					active_accounts: results[3],
-					active_accounts2: results[4][0],
-					timeElapsedString: timeElapsedString
+							Promise.all([
+									executeQuery(query1),
+									executeQuery(query2),
+									executeQuery(query3),
+									executeQuery(query4),
+									executeQuery(query5)
+							])
+							.then(([results1, results2, results3, results4, results5]) => {
+									// Check if each result array exists and has at least one element
+									if (!results1 || !results2[0] || !results3[0] || !results4 || !results5[0]) {
+											// Handle the case where expected data is missing
+											reject('Invalid data structure in the database results');
+									}
+
+									// Render dashboard template
+									response.render('admin/dashboard.html', {
+											selected: 'dashboard',
+											accounts: results1,
+											accounts_total: results2[0],
+											inactive_accounts: results3[0],
+											active_accounts: results4,
+											active_accounts2: results5[0],
+											timeElapsedString: timeElapsedString
+									});
+
+									resolve(); // Resolve the outer promise to indicate completion
+							})
+							.catch(error => {
+									reject(error); // Reject the outer promise if there's an error
+							});
+					}, () => {
+							return response.redirect('/');
+					});
 			});
-	});
-}, () => {
-	// Redirect to login page
-	response.redirect('/');
-}));
+	} catch (error) {
+			// Handle errors
+			console.error(error);
+			response.status(500).send('Internal Server Error');
+	}
+});
 
 
 // http://localhost:3000/admin/accounts - Admin accounts page
