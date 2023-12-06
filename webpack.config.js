@@ -29,7 +29,15 @@ const config = {
     'static': {
       directory: './dist'
     }
-  }
+  },
+  resolve: {
+    fallback: {
+      path: false,
+      os: false,
+      crypto: false
+    },
+  },
+
 };
 
 module.exports = config;
