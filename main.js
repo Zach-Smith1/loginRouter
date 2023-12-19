@@ -1016,10 +1016,10 @@ const isAdmin = (request, callback, callback2) => {
 
 // Function init - check loggedin and retrieve settings
 const init = (request, callback) => {
+	// Get current Time to update last seen date and user_activity.login_time
+	let d = new Date();
+	let now = (new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString()).slice(0, -1).split('.')[0];
 	if (request.session.account_loggedin) {
-		// Update last seen date
-		let d = new Date();
-		let now = (new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString()).slice(0, -1).split('.')[0];
 		connection.query('UPDATE accounts SET last_seen = ? WHERE id = ?', [now, request.session.account_id]);
 	}
 	connection.query('SELECT * FROM settings', (error, settings) => {
@@ -1030,6 +1030,7 @@ const init = (request, callback) => {
 		}
 		callback(settings_obj);
 	});
+	connection.query('INSERT INTO user_activity (username, login_time) VALUES (?, ?)', [request.session.account_username, now]);
 };
 
 // LoginAttempts function - prevents bruteforce attacks
