@@ -1,4 +1,8 @@
+---
 deployment:
   tasks:
+    - export DEPLOYPATH=/home/eaasynmb/repositories/userLoginRouter
+    - /bin/cp -R * $DEPLOYPATH
+    - cd $DEPLOYPATH
     - npm install
-    - npm start
+    - npm run start
