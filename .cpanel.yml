@@ -1,7 +1,7 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/eaasynmb/repositories/userLoginRouter
+    - export DEPLOYPATH=/home/eaasynmb/public_html/
     - /bin/cp -R static $DEPLOYPATH
     - /bin/cp -R views $DEPLOYPATH
     - /bin/cp main.js $DEPLOYPATH
