@@ -2,7 +2,11 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/eaasynmb/repositories/userLoginRouter
-    - /bin/cp -R * $DEPLOYPATH
+    - /bin/cp -R static $DEPLOYPATH
+    - /bin/cp -R views $DEPLOYPATH
+    - /bin/cp main.js $DEPLOYPATH
+    - /bin/cp package-lock.json $DEPLOYPATH
+    - /bin/cp package.json $DEPLOYPATH
     - cd $DEPLOYPATH
     - npm install
     - npm run start
