@@ -1,12 +1,6 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/eaasynmb/public_html/
-    - /bin/cp -R static $DEPLOYPATH
-    - /bin/cp -R views $DEPLOYPATH
-    - /bin/cp main.js $DEPLOYPATH
-    - /bin/cp package-lock.json $DEPLOYPATH
-    - /bin/cp package.json $DEPLOYPATH
-    - cd $DEPLOYPATH
+    - PATH={/opt/homebrew/bin/node}:$PATH
     - npm install
     - npm run start
