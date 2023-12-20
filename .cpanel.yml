@@ -1,9 +1,8 @@
----
 deployment:
   tasks:
-    - PATH={/opt/homebrew/bin/node}:$PATH
+    - export PATH={/opt/homebrew/bin/node}:$PATH
     - export DEPLOYPATH=/home/eaasynmb/public_html/
-    - /cp -r * $DEPLOYPATH
+    - /bin/cp -r * $DEPLOYPATH
     - cd $DEPLOYPATH
     - npm install
     - npm run start
