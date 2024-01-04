@@ -268,6 +268,9 @@ body.loggedin {
 }
 
 @media screen and (max-width: 1000px) {
+  body {
+    text-align: center;
+  }
   .navtop {
     height: auto;
     padding: 10px;
@@ -277,12 +280,15 @@ body.loggedin {
     width: 100%;
   }
   .navtop div h1 {
-    display: block;
+    display: flex;
+    justify-content: center;
     flex-basis: 100%;
   }
   .navtop div a {
+    display: flex;
+    justify-content: center;
     padding: 10px 0;
-    flex-basis: 50%;
+    flex-basis: 33%;
   }
   .content {
     padding: 10px;
