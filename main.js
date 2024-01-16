@@ -164,6 +164,64 @@ app.post(['/', '/login'], (request, response) => init(request, settings => {
 	}
 }));
 
+app.get('/eaasyai', (request, response) => {
+const base64UrlEncode = (str) => {
+    let base64 = Buffer.from(str).toString('base64');
+    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+const generateHMACSHA256 = (header, payload, secret) => {
+    const hmac = cryptography.createHmac('sha256', secret);
+    hmac.update(`${header}.${payload}`);
+
+    return hmac.digest('base64url');
+}
+
+const getTimeRange = () => {
+  let start = Math.floor(new Date().getTime() / 1000)
+  let end = start + 120
+  return [start, end];
+}
+
+const getUUID = () => {
+    const bytes = cryptography.randomBytes(16);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;  // set version to 4
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;  // set variant to RFC4122
+    return bytes.toString('hex');
+}
+
+const uuid = getUUID();
+
+const getEmail = () => {
+    return new Promise((resolve, reject) => {
+        connection.query('SELECT * FROM accounts WHERE username = ?', [request.session.account_username], (error, accounts, fields) => {
+            if (error) {
+                reject(error);
+            } else {
+                resolve(accounts[0].email);
+            }
+        });
+    });
+};
+
+getEmail()
+    .then((email) => {
+			let [start,end] = getTimeRange();
+
+			const encodedHeader = base64UrlEncode('{"alg":"HS256","typ":"JWT"}');
+			const encodedPayload = base64UrlEncode(`{"nbf":${start},"exp":${end},"iat":${start},"jti":${uuid},"email":${email}}`);
+			const secretCode = 'oUMsdmfjAukHgPFviVzQbEpzLho6DnF5';
+			const signature = generateHMACSHA256(encodedHeader, encodedPayload, secretCode);
+			const prefix = 'https://accounts.zohoportal.com/accounts/p/10070735863/signin/jwt/auth?jwt='
+			const suffix = '&return_to=https://analytics.eaasyai.com'
+
+			response.redirect(`${prefix}${encodedHeader}.${encodedPayload}.${signature}${suffix}`)
+    })
+    .catch((error) => {
+        console.error(error, '... Error fetching ' + request.session.account_username + '\'s email');
+    });
+})
+
 // http://localhost:3000/register - display the registration page
 app.get('/register', (request, response) => isLoggedin(request, () => {
 	// User is logged in, redirect to home page
