@@ -14,12 +14,24 @@ const port = process.env.PORT || 3000;
 
 const secret_key = 'your secret key'; // Unique secret key
 
-// MySQL connection details
+// Free MySQL connection details
+// const connection = mysql.createPool({
+// 	host     : 'sql3.freesqldatabase.com',
+// 	user     : 'sql3666836',
+// 	password : 'kBHjuSJS4Y',
+// 	database : 'sql3666836',
+// 	port     : '3306',
+// 	waitForConnections: true,
+// 	connectionLimit: 10,
+// 	queueLimit: 0,
+// });
+
+// NameCheap MySQL connection details
 const connection = mysql.createPool({
-	host     : 'sql3.freesqldatabase.com',
-	user     : 'sql3666836',
-	password : 'kBHjuSJS4Y',
-	database : 'sql3666836',
+	host     : 'localhost',
+	user     : 'eaasynmb_thedon',
+	password : 'vV@#Q$MCWCwa8EpRk&uGY9^A5UmD3',
+	database : 'eaasynmb_xfiles',
 	port     : '3306',
 	waitForConnections: true,
 	connectionLimit: 10,
@@ -89,12 +101,16 @@ app.post(['/', '/login'], (request, response) => init(request, settings => {
 	let token = request.body.token;
 	// Get client IP address
 	let ip = request.headers['x-forwarded-for'] || request.socket.remoteAddress;
+	if (ip.includes(',')) ip = ip.slice(0, ip.indexOf(','));
 	// Bruteforce protection
 	if (settings['brute_force_protection'] == 'true') {
 		loginAttempts(ip, false, result => {
-			if (result && result['attempts_left'] <= 1) {
+			if (result && result['attempts_left'] === 2) {
 				// No login attempts remaining
-				response.send('You cannot login right now! Please try again later!');
+				response.send('You will be locked out after 1 more failed attempt!');
+				return response.end();
+			} else if (result && result['attempts_left'] <= 1) {
+			    response.send('Too many failed attempts! Please try again later!');
 				return response.end();
 			}
 		});
@@ -191,12 +207,18 @@ const getUUID = () => {
 }
 
 const uuid = getUUID();
+const username = request.session.account_username;
+
+// request.session.account_loggedin = false;    // this code is redundant assuming user is logged out and eaasy opens in new page
+// request.session.destroy();
+// response.clearCookie('rememberme');
 
 const getEmail = () => {
     return new Promise((resolve, reject) => {
-        connection.query('SELECT * FROM accounts WHERE username = ?', [request.session.account_username], (error, accounts, fields) => {
-            if (error) {
+        connection.query('SELECT * FROM accounts WHERE username = ?', [username], (error, accounts, fields) => {
+            if (error || !accounts[0]) {
                 reject(error);
+								response.redirect('/')
             } else {
                 resolve(accounts[0].email);
             }
@@ -206,19 +228,17 @@ const getEmail = () => {
 
 getEmail()
     .then((email) => {
-			let [start,end] = getTimeRange();
-
+			const [start,end] = getTimeRange();
 			const encodedHeader = base64UrlEncode('{"alg":"HS256","typ":"JWT"}');
 			const encodedPayload = base64UrlEncode(`{"nbf":${start},"exp":${end},"iat":${start},"jti":${uuid},"email":${email}}`);
 			const secretCode = 'oUMsdmfjAukHgPFviVzQbEpzLho6DnF5';
 			const signature = generateHMACSHA256(encodedHeader, encodedPayload, secretCode);
 			const prefix = 'https://accounts.zohoportal.com/accounts/p/10070735863/signin/jwt/auth?jwt='
 			const suffix = '&return_to=https://analytics.eaasyai.com'
-
 			response.redirect(`${prefix}${encodedHeader}.${encodedPayload}.${signature}${suffix}`)
     })
     .catch((error) => {
-        console.error(error, '... Error fetching ' + request.session.account_username + '\'s email');
+        console.error(error, '... Error fetching ' + username + '\'s email');
     });
 })
 
@@ -555,10 +575,15 @@ app.post('/twofactor', (request, response) => {
 
 // http://localhost:3000/home - display the home page
 app.get('/home', (request, response) => isLoggedin(request, settings => {
+	if (!request.session) {
+		response.redirect('/');
+		return
+	}
 	// Render home template
 	response.render('home.html', { username: request.session.account_username, role: request.session.account_role, tier: request.session.account_tier, token: request.session.token });
 }, () => {
 	// Redirect to login page
+	console.log('redirecting now....')
 	response.redirect('/');
 }));
 
@@ -1037,6 +1062,7 @@ app.get('/admin/about', (request, response) => isAdmin(request, settings => {
 // Function that checks whether the user is logged-in or not
 const isLoggedin = (request, callback, callback2) => {
 	// Check if the loggedin param exists in session
+	if (!request.session) return callback2 !== undefined ? callback2(settings) : false;
 	init(request, settings => {
 		if (request.session.account_loggedin) {
 			return callback !== undefined ? callback(settings) : false;
@@ -1076,7 +1102,7 @@ const isAdmin = (request, callback, callback2) => {
 const init = (request, callback) => {
 	// Get current Time to update last seen date and user_activity.login_time
 	let d = new Date();
-	let now = (new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString()).slice(0, -1).split('.')[0];
+    let now = (new Date(d.getTime() - d.getTimezoneOffset() - 8 * 60 * 60 * 1000).toISOString()).slice(0, -1).split('.')[0];
 	if (request.session.account_loggedin) {
 		connection.query('UPDATE accounts SET last_seen = ? WHERE id = ?', [now, request.session.account_id]);
 	}
@@ -1088,14 +1114,19 @@ const init = (request, callback) => {
 		}
 		callback(settings_obj);
 	});
-	connection.query('INSERT INTO user_activity (username, login_time) VALUES (?, ?)', [request.session.account_username, now]);
+	let clientIp = request.headers['x-real-ip'] || request.headers['x-forwarded-for'] || request.socket.remoteAddress || request.client;
+	if (clientIp.includes(',')) clientIp = clientIp.slice(0, clientIp.indexOf(','));
+
+	connection.query('INSERT INTO user_activity (username, login_time, ip) VALUES (?, ?, ?)', [request.session.account_username, now, clientIp]);
+
 };
 
 // LoginAttempts function - prevents bruteforce attacks
 const loginAttempts = (ip, update = true, callback) => {
 	// Get the current date
-	let d = new Date();
-	let now = (new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString()).slice(0, -1).split('.')[0];
+    let d = new Date();
+    let now = (new Date(d.getTime() - d.getTimezoneOffset() - 8 * 60 * 60 * 1000).toISOString()).slice(0, -1).split('.')[0];
+
 	// Update attempts left
 	if (update) {
 		connection.query('INSERT INTO login_attempts (ip_address, `date`) VALUES (?,?) ON DUPLICATE KEY UPDATE attempts_left = attempts_left - 1, `date` = VALUES(`date`)', [ip, now]);

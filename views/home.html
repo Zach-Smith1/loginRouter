@@ -8,15 +8,14 @@
     <p class="block">Welcome back, {{ username }}!</p>
     <!-- <p>You're currently subscribed to tier {{ tier }}!</p> -->
     <script>
-        // Get the value of 'tier' from the template
-        const tier = '{{ tier }}';
+        const tier = '{{ tier }}'; // Get the value of 'tier' from the template
         const token = '{{ token }}';
         // Create a new paragraph and button elements
         let pElement = document.createElement('p');
         pElement.classList.add('block');
         let buttonElement = document.createElement('button');
         buttonElement.textContent = 'Launch Application';
-        // Use JavaScript to conditionally set the text content based on the 'tier' value
+        // Conditionally set the text content based on the 'tier' value
         if (tier == 0) {
             pElement.textContent = 'You are not subscribed, please contact us to upgrade your service\n';
             buttonElement.textContent = 'Email';
@@ -26,17 +25,20 @@
         } else if (tier == 1) {
             pElement.textContent = 'You have access to Basic Analytics!\n';
             buttonElement.addEventListener('click', function() {
-                window.location.href = 'https://paymentsvisualizer-5d34b3024a19.herokuapp.com/?token=' + token;
+                let app = 'https://analytics.eaasystart.com/?token='
+                window.location.href = app + token;
             });
         } else if (tier == 2) {
             pElement.textContent = 'You have access to Advanced Analytics!\n';
             buttonElement.addEventListener('click', function() {
-                window.location.href = '/eaasyai';
+                window.open('/eaasyai', '_blank');
+                setTimeout(() => window.location.href = ('/logout'), 500)
             });
         } else if (tier == 3) {
             pElement.textContent = 'You have access to Expert Analytics!\n';
             buttonElement.addEventListener('click', function() {
-                window.location.href = '/eaasyai';
+                window.open('/eaasyai', '_blank');
+                setTimeout(() => window.location.href = ('/logout'), 500)
             });
         } else {
             pElement.textContent = 'Subscription Error please Contact your Administrator';
